@@ -2,11 +2,11 @@
 
 App móvil (Android/iOS) **y** página web para encontrar skateparks cercanos y hacer comunidad:
 
-- 📍 **Parques cercanos** según tu ubicación (5 / 25 / 100 km), con "Cómo llegar" en Google Maps
-- 🗺️ **Skateparks de OpenStreetMap** importados automáticamente al abrir el mapa (datos abiertos, sin key)
+- 🗺️ **Mapa oscuro** con todos los skateparks (agrupados al alejar el zoom) y lista por radio (10 / 50 / 200 km), con "Cómo llegar" en Google Maps
+- 🇺🇸 **Todos los skateparks de EE. UU.** precargados desde OpenStreetMap, y los de otras zonas al navegar el mapa
 - ➕ **Agregar skateparks** con foto, desde el propio parque
 - 💬 **Chat en tiempo real**: canal general + un chat por cada skatepark
-- 📅 **Encuentros**: arma sesiones en un parque, apúntate o sal
+- 🔴 **Sesiones en vivo**: burbuja con quién patina ahora y botón Unirse; programa sesiones por tipo, nivel y duración
 - 🎥 **Trucos**: sube fotos y videos (máx. 60 s) y da likes
 - 👤 **Perfil** con avatar, bio y tus trucos
 
@@ -81,11 +81,11 @@ También se puede correr en tu computadora: `SUPABASE_SERVICE_ROLE_KEY=... npm r
 
 ```
 app/                  Pantallas (cada archivo es una ruta)
-  (tabs)/             Parques · Trucos · Encuentros · Chat · Perfil
+  (tabs)/             Parques · Trucos · Sesiones · Chat · Perfil
   park/[id].tsx       Detalle del skatepark
   park/new.tsx        Registrar skatepark
   chat/[room].tsx     Chat de un parque
-  meetup/new.tsx      Crear encuentro
+  meetup/new.tsx      Crear sesión
   post/new.tsx        Subir truco
   login.tsx           Entrar / registrarse
 components/           UI reutilizable (tarjetas, chat, video, selector de parque)
@@ -101,7 +101,6 @@ scripts/              Importación masiva de skateparks desde OpenStreetMap
 
 ## Próximas ideas
 
-- Mapa interactivo de skateparks
 - Notificaciones push (mensajes, recordatorio de encuentros)
 - Seguir a otros skaters
 - Reportar contenido / moderación
