@@ -1,11 +1,13 @@
 import { colors } from '@/constants/theme';
 
+import { CARTO_BASEMAPS_KEY } from './config';
+
 export type MapPark = { id: string; name: string; lat: number; lng: number; live: number };
 export type MapData = { parks: MapPark[]; user: { lat: number; lng: number } | null; selectedId: string | null };
 export type MapEvent = { type: 'ready' } | { type: 'select'; id: string | null };
 
 /**
- * Página HTML con un mapa Leaflet + teselas de CARTO/OpenStreetMap (gratis, sin API key).
+ * Página HTML con un mapa Leaflet + teselas de CARTO/OpenStreetMap (key gratuita en lib/config.ts).
  * La app le manda datos con window.setData(...) (móvil) o postMessage (web),
  * y el mapa avisa cuando se toca un parque.
  */
@@ -33,7 +35,7 @@ export const MAP_HTML = `<!doctype html>
 </head><body><div id="map"></div>
 <script>
   var map = L.map('map', { zoomControl: false }).setView([20, -40], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=${CARTO_BASEMAPS_KEY}', {
     maxZoom: 19, subdomains: 'abcd',
     attribution: '&copy; OpenStreetMap &copy; CARTO'
   }).addTo(map);
