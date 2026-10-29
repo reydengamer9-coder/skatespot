@@ -1,5 +1,5 @@
 -- SkateSpot · Migración 002: sesiones en vivo y opciones de sesión
--- Ejecuta este archivo en el SQL Editor de Supabase (después de schema.sql).
+-- Ya incluida en schema.sql; solo hace falta si ejecutaste una versión anterior de schema.sql.
 
 alter table public.meetups
   add column if not exists duration_minutes int not null default 120
