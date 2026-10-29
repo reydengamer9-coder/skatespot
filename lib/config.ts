@@ -8,5 +8,5 @@ export const SUPABASE_ANON_KEY =
 
 
 // Estilo del mapa (OpenFreeMap: gratis, código abierto, sin key ni límites).
-// Otros estilos: bright, positron, dark, fiord → https://openfreemap.org/quick_start/
-export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+// Otros estilos: liberty (tipo Google Maps), bright, positron, fiord → https://openfreemap.org/quick_start/
+export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';

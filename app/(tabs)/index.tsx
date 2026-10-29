@@ -11,48 +11,102 @@ import { colors, spacing } from '@/constants/theme';
 import { useUserId } from '@/lib/auth';
 import { formatDistance } from '@/lib/format';
 import { useLocation } from '@/lib/location';
-import type { MapData } from '@/lib/mapHtml';
-import { importNearbySkateparks } from '@/lib/osm';
+import { distanceKm, type Bounds } from '@/lib/geo';
+import type { MapData, MapEvent } from '@/lib/mapHtml';
+import { importNearbySkateparks, importSkateparksInBounds } from '@/lib/osm';
 import { fetchSessions } from '@/lib/sessions';
 import { supabase } from '@/lib/supabase';
 import type { Meetup, Skatepark } from '@/lib/types';
 
-const RADII = [5, 25, 100];
+const RADII = [10, 50, 200];
 const REFRESH_MS = 60_000;
+const IMPORT_MIN_ZOOM = 8; // con menos zoom la zona visible es demasiado grande para importar de OSM
+const PARK_COLUMNS = 'id, name, description, address, lat, lng, photo_url, osm_id';
+
+const wrapLng = (x: number) => ((((x + 180) % 360) + 360) % 360) - 180;
+
+/** Parques dentro de la zona visible del mapa (hasta 2000). */
+async function fetchParksInBounds(b: Bounds) {
+  let q = supabase.from('skateparks').select(PARK_COLUMNS).gte('lat', b.south).lte('lat', b.north).limit(2000);
+  if (b.east - b.west < 360) {
+    const w = wrapLng(b.west);
+    const e = wrapLng(b.east);
+    // Si la zona cruza el antimeridiano (w > e) se piden los dos lados
+    q = w <= e ? q.gte('lng', w).lte('lng', e) : q.or(`lng.gte.${w},lng.lte.${e}`);
+  }
+  const { data } = await q;
+  return (data as Skatepark[]) ?? [];
+}
 
 export default function ParksScreen() {
   const userId = useUserId();
   const { coords, error, refresh } = useLocation();
   const [view, setView] = useState<'map' | 'list'>('map');
-  const [radius, setRadius] = useState(25);
-  const [parks, setParks] = useState<Skatepark[]>([]);
+  const [radius, setRadius] = useState(50);
+  const [listParks, setListParks] = useState<Skatepark[]>([]);
+  // Todos los parques que se han cargado en el mapa (se van acumulando al moverse)
+  const [mapParks, setMapParks] = useState<Record<string, Skatepark>>({});
   const [live, setLive] = useState<Meetup[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState(0);
 
+  const mergeParks = useCallback((list: Skatepark[]) => {
+    if (list.length) setMapParks((prev) => ({ ...prev, ...Object.fromEntries(list.map((p) => [p.id, p])) }));
+  }, []);
+
+  const runImport = useCallback(async (job: () => Promise<number>) => {
+    setImporting((n) => n + 1);
+    const added = await job();
+    setImporting((n) => n - 1);
+    return added;
+  }, []);
+
+  /** Lista por radio + sesiones en vivo (se refresca cada minuto). */
   const load = useCallback(async () => {
     setLoading(true);
-    // Sin ubicación mostramos todos los parques; con ubicación, los del radio elegido.
-    const fetchParks = async () => {
-      const { data } = coords
-        ? await supabase.rpc('nearby_skateparks', { user_lat: coords.lat, user_lng: coords.lng, radius_km: radius })
-        : await supabase.from('skateparks').select('*').limit(200);
+    const fetchNearby = async () => {
+      if (!coords) return [];
+      const { data } = await supabase.rpc('nearby_skateparks', {
+        user_lat: coords.lat,
+        user_lng: coords.lng,
+        radius_km: radius,
+      });
       return (data as Skatepark[]) ?? [];
     };
-    const [list, sessions] = await Promise.all([fetchParks(), fetchSessions()]);
-    setParks(list);
+    const [list, sessions] = await Promise.all([fetchNearby(), fetchSessions()]);
+    setListParks(list);
+    mergeParks(list);
     setLive(sessions.live);
     setLoading(false);
 
-    // Completa el mapa con los skateparks de OpenStreetMap de la zona (una vez por zona)
-    if (coords) {
-      setImporting(true);
-      const added = await importNearbySkateparks(coords, radius, userId, list);
-      setImporting(false);
-      if (added) setParks(await fetchParks());
+    // Completa la lista con los skateparks de OpenStreetMap alrededor del usuario (una vez por zona)
+    if (coords && (await runImport(() => importNearbySkateparks(coords, radius, userId, list)))) {
+      const again = await fetchNearby();
+      setListParks(again);
+      mergeParks(again);
     }
-  }, [coords, radius, userId]);
+  }, [coords, radius, userId, mergeParks, runImport]);
+
+  /** El mapa se movió: carga los parques de la zona visible e importa los de OpenStreetMap. */
+  const onBounds = useCallback(
+    async (b: Bounds, zoom: number) => {
+      const list = await fetchParksInBounds(b);
+      mergeParks(list);
+      if (zoom >= IMPORT_MIN_ZOOM && (await runImport(() => importSkateparksInBounds(b, userId, list)))) {
+        mergeParks(await fetchParksInBounds(b));
+      }
+    },
+    [userId, mergeParks, runImport],
+  );
+
+  const onMapEvent = useCallback(
+    (e: MapEvent) => {
+      if (e.type === 'select') setSelectedId(e.id);
+      else if (e.type === 'bounds') onBounds(e.bounds, e.zoom);
+    },
+    [onBounds],
+  );
 
   // Recarga al volver a la pestaña y cada minuto mientras está abierta (sesiones en vivo).
   useFocusEffect(
@@ -69,32 +123,52 @@ export default function ParksScreen() {
     return map;
   }, [live]);
 
-  const mapData = useMemo<MapData>(
-    () => ({
-      parks: parks.map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, live: liveByPark.get(p.id)?.length ?? 0 })),
-      user: coords,
-      selectedId,
-    }),
-    [parks, liveByPark, coords, selectedId],
-  );
+  const mapData = useMemo<MapData>(() => {
+    const points = new Map(
+      Object.values(mapParks).map((p) => [p.id, { id: p.id, lat: p.lat, lng: p.lng, live: liveByPark.get(p.id)?.length ?? 0 }]),
+    );
+    // Los parques con sesión en vivo siempre aparecen, aunque aún no se haya cargado su zona
+    live.forEach((m) => {
+      if (!points.has(m.park_id) && m.skateparks) {
+        points.set(m.park_id, { id: m.park_id, lat: m.skateparks.lat, lng: m.skateparks.lng, live: liveByPark.get(m.park_id)!.length });
+      }
+    });
+    return { parks: [...points.values()], user: coords, selectedId };
+  }, [mapParks, live, liveByPark, coords, selectedId]);
 
-  const selected = parks.find((p) => p.id === selectedId) ?? null;
+  const selected = useMemo<Skatepark | null>(() => {
+    if (!selectedId) return null;
+    if (mapParks[selectedId]) return mapParks[selectedId];
+    // Parque elegido desde la burbuja en vivo cuya zona aún no se cargó en el mapa
+    const p = live.find((m) => m.park_id === selectedId)?.skateparks;
+    return p ? { id: selectedId, name: p.name, lat: p.lat, lng: p.lng, description: null, address: null, photo_url: null } : null;
+  }, [selectedId, mapParks, live]);
+  const withDistance = (p: Skatepark) =>
+    coords && p.distance_km == null ? { ...p, distance_km: distanceKm(coords, p) } : p;
 
   return (
     <Screen>
       {view === 'map' ? (
         <View style={{ flex: 1 }}>
-          <ParkMap data={mapData} onSelect={setSelectedId} />
-          {selected && <ParkSheet park={selected} sessions={liveByPark.get(selected.id) ?? []} onClose={() => setSelectedId(null)} />}
+          <ParkMap data={mapData} onEvent={onMapEvent} />
+          {selected && (
+            <ParkSheet
+              park={withDistance(selected)}
+              sessions={liveByPark.get(selected.id) ?? []}
+              onClose={() => setSelectedId(null)}
+            />
+          )}
         </View>
       ) : (
         <FlatList
-          data={parks}
+          data={listParks}
           keyExtractor={(p) => p.id}
           contentContainerStyle={{ padding: spacing, paddingTop: 130, gap: 12, paddingBottom: 100 }}
           refreshing={loading}
           onRefresh={load}
-          ListEmptyComponent={<Empty text="No hay skateparks registrados cerca. ¡Agrega el primero!" />}
+          ListEmptyComponent={
+            <Empty text={coords ? 'No hay skateparks en este radio. Prueba uno más grande.' : 'Activa tu ubicación para ver la lista.'} />
+          }
           renderItem={({ item }) => {
             const n = liveByPark.get(item.id)?.length ?? 0;
             return (
@@ -122,7 +196,7 @@ export default function ParksScreen() {
             <Chip label="🗺️ Mapa" active={view === 'map'} onPress={() => setView('map')} />
             <Chip label="☰ Lista" active={view === 'list'} onPress={() => setView('list')} />
           </View>
-          {coords && (
+          {coords && view === 'list' && (
             <View style={styles.segment}>
               {RADII.map((r) => (
                 <Chip key={r} label={`${r} km`} active={radius === r} onPress={() => setRadius(r)} />
@@ -137,7 +211,7 @@ export default function ParksScreen() {
             setSelectedId(id);
           }}
         />
-        {importing && <Text style={styles.importing}>Buscando skateparks en OpenStreetMap…</Text>}
+        {importing > 0 && <Text style={styles.importing}>Buscando skateparks en OpenStreetMap…</Text>}
         {error && (
           <Pressable onPress={refresh} style={styles.warning}>
             <Text style={{ color: colors.text, fontSize: 13 }}>{error} Toca para reintentar.</Text>

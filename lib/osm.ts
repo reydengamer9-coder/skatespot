@@ -1,3 +1,4 @@
+import { distanceKm, type Bounds } from './geo';
 import type { Coords } from './location';
 import { supabase } from './supabase';
 import type { Skatepark } from './types';
@@ -22,14 +23,10 @@ type OsmElement = {
 };
 
 // Zonas ya importadas en esta sesión, para no repetir la consulta
-const imported = new Set<string>();
+const imported: Bounds[] = [];
+const contains = (outer: Bounds, inner: Bounds) =>
+  outer.south <= inner.south && outer.west <= inner.west && outer.north >= inner.north && outer.east >= inner.east;
 
-function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const rad = Math.PI / 180;
-  const x = (b.lng - a.lng) * rad * Math.cos(((a.lat + b.lat) / 2) * rad);
-  const y = (b.lat - a.lat) * rad;
-  return Math.sqrt(x * x + y * y) * 6371000;
-}
 
 function describe(tags: Record<string, string>) {
   const surface: Record<string, string> = { concrete: 'concreto', asphalt: 'asfalto', wood: 'madera', metal: 'metal' };
@@ -48,20 +45,46 @@ function address(tags: Record<string, string>) {
   return [street, tags['addr:suburb'] ?? tags['addr:city']].filter(Boolean).join(', ');
 }
 
-/** Devuelve cuántos parques nuevos se agregaron (0 si la zona ya estaba importada o falló la consulta). */
-export async function importNearbySkateparks(coords: Coords, radiusKm: number, userId: string, existing: Skatepark[]) {
+/** Importa los skateparks en un radio alrededor del usuario. Devuelve cuántos se agregaron. */
+export function importNearbySkateparks(coords: Coords, radiusKm: number, userId: string, existing: Skatepark[]) {
   const radius = Math.min(radiusKm, MAX_RADIUS_KM) * 1000;
-  // ~1 km de precisión: moverse un poco no repite la consulta
-  const key = `${coords.lat.toFixed(2)},${coords.lng.toFixed(2)},${radius}`;
-  if (imported.has(key)) return 0;
-  imported.add(key);
+  const box = (km: number) => {
+    const dLat = km / 111;
+    const dLng = km / (111 * Math.cos((coords.lat * Math.PI) / 180));
+    return { south: coords.lat - dLat, north: coords.lat + dLat, west: coords.lng - dLng, east: coords.lng + dLng };
+  };
+  // Se salta si el círculo ya está cubierto; lo que queda cubierto es el cuadrado inscrito en él
+  return importArea(
+    `(around:${radius},${coords.lat},${coords.lng})`,
+    box(radius / 1000),
+    box(radius / 1000 / Math.SQRT2),
+    userId,
+    existing,
+  );
+}
 
-  const around = `(around:${radius},${coords.lat},${coords.lng})`;
+const GRID = 0.25; // grados (~25 km): las zonas se redondean a esta cuadrícula
+const MAX_BOUNDS_DEGREES = 3; // zonas más grandes (país entero) serían demasiado para Overpass
+
+/** Importa los skateparks de la zona visible del mapa. Devuelve cuántos se agregaron. */
+export function importSkateparksInBounds(b: Bounds, userId: string, existing: Skatepark[]) {
+  const snap = (v: number, up: boolean) => (up ? Math.ceil(v / GRID) : Math.floor(v / GRID)) * GRID;
+  const s = snap(b.south, false), w = snap(b.west, false), n = snap(b.north, true), e = snap(b.east, true);
+  if (n - s > MAX_BOUNDS_DEGREES || e - w > MAX_BOUNDS_DEGREES) return Promise.resolve(0);
+  const rect = { south: s, west: w, north: n, east: e };
+  return importArea(`(${s},${w},${n},${e})`, rect, rect, userId, existing);
+}
+
+/** Devuelve cuántos parques nuevos se agregaron (0 si la zona ya estaba importada o falló la consulta). */
+async function importArea(area: string, needed: Bounds, covers: Bounds, userId: string, existing: Skatepark[]) {
+  if (imported.some((r) => contains(r, needed))) return 0;
+  imported.push(covers);
+
   const query = `[out:json][timeout:25];
 (
-  nwr["leisure"="pitch"]["sport"~"skateboard"]${around};
-  nwr["leisure"="skatepark"]${around};
-  nwr["sport"="skateboard"]["leisure"~"^(park|sports_centre|track|recreation_ground)$"]${around};
+  nwr["leisure"="pitch"]["sport"~"skateboard"]${area};
+  nwr["leisure"="skatepark"]${area};
+  nwr["sport"="skateboard"]["leisure"~"^(park|sports_centre|track|recreation_ground)$"]${area};
 );
 out center tags 300;`;
 
@@ -84,7 +107,7 @@ out center tags 300;`;
       const lng = el.lon ?? el.center?.lon;
       const tags = el.tags ?? {};
       if (lat == null || lng == null || tags.shop) continue;
-      if (kept.some((k) => distanceMeters(k, { lat, lng }) < DUPLICATE_METERS)) continue;
+      if (kept.some((k) => distanceKm(k, { lat, lng }) * 1000 < DUPLICATE_METERS)) continue;
       kept.push({ lat, lng });
       rows.push({
         osm_id: `${el.type}/${el.id}`,
@@ -105,7 +128,7 @@ out center tags 300;`;
     if (error) throw error;
     return data?.length ?? 0;
   } catch (e) {
-    imported.delete(key); // reintentar la próxima vez
+    imported.splice(imported.indexOf(covers), 1); // reintentar la próxima vez
     console.warn('No se pudieron importar skateparks de OpenStreetMap', e);
     return 0;
   }

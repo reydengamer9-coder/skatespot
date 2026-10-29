@@ -3,20 +3,20 @@ import { useEffect, useRef, useState } from 'react';
 import { MAP_HTML, type MapData, type MapEvent } from '@/lib/mapHtml';
 
 /** Mapa de skateparks (web): el mismo HTML de Leaflet dentro de un iframe. */
-export function ParkMap({ data, onSelect }: { data: MapData; onSelect: (id: string | null) => void }) {
+export function ParkMap({ data, onEvent }: { data: MapData; onEvent: (e: MapEvent) => void }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
-  const onSelectRef = useRef(onSelect);
+  const onEventRef = useRef(onEvent);
   useEffect(() => {
-    onSelectRef.current = onSelect;
-  }, [onSelect]);
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   useEffect(() => {
     function handle(e: MessageEvent) {
       if (e.source !== ref.current?.contentWindow || !e.data?.skatespot) return;
       const msg = JSON.parse(e.data.skatespot) as MapEvent;
       if (msg.type === 'ready') setReady(true);
-      else onSelectRef.current(msg.id);
+      else onEventRef.current(msg);
     }
     window.addEventListener('message', handle);
     return () => window.removeEventListener('message', handle);

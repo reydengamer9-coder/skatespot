@@ -83,7 +83,7 @@ as $$
   from public.skateparks s
   where st_dwithin(s.location, st_setsrid(st_makepoint(user_lng, user_lat), 4326)::geography, radius_km * 1000)
   order by distance_km
-  limit 100;
+  limit 500;
 $$;
 
 -- ─────────────────────────────────────────────

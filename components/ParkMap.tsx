@@ -9,7 +9,7 @@ import { MAP_HTML, type MapData, type MapEvent } from '@/lib/mapHtml';
 const MapWebView = WebView<{}>;
 
 /** Mapa de skateparks (Android/iOS). La versión web está en ParkMap.web.tsx. */
-export function ParkMap({ data, onSelect }: { data: MapData; onSelect: (id: string | null) => void }) {
+export function ParkMap({ data, onEvent }: { data: MapData; onEvent: (e: MapEvent) => void }) {
   const ref = useRef<InstanceType<typeof MapWebView>>(null);
   const [ready, setReady] = useState(false);
 
@@ -26,7 +26,7 @@ export function ParkMap({ data, onSelect }: { data: MapData; onSelect: (id: stri
       onMessage={(e) => {
         const msg = JSON.parse(e.nativeEvent.data) as MapEvent;
         if (msg.type === 'ready') setReady(true);
-        else onSelect(msg.id);
+        else onEvent(msg);
       }}
     />
   );
