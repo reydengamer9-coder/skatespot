@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView } from 'react-native';
 
-import { Body } from '@/components/ui';
-import { colors } from '@/constants/theme';
+import { Body, Chip } from '@/components/ui';
 import { formatDistance } from '@/lib/format';
 import { useLocation } from '@/lib/location';
 import { supabase } from '@/lib/supabase';
@@ -45,15 +44,3 @@ export function ParkPicker({
   );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.active]}>
-      <Text style={{ color: active ? colors.accentText : colors.text, fontWeight: '600' }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, borderWidth: 1, borderColor: colors.border },
-  active: { backgroundColor: colors.accent, borderColor: colors.accent },
-});

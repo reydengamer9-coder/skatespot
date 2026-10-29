@@ -1,44 +1,59 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, Title } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import { useUserId } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
-import { supabase } from '@/lib/supabase';
+import { isLive, levelLabel, minutesLeft, sessionTypeInfo, toggleAttendance } from '@/lib/sessions';
 import type { Meetup } from '@/lib/types';
 
-export const MEETUP_SELECT = '*, skateparks(name), profiles(username), meetup_attendees(user_id)';
-
-export function MeetupCard({ meetup }: { meetup: Meetup }) {
+export function MeetupCard({ meetup, compact }: { meetup: Meetup; compact?: boolean }) {
   const userId = useUserId();
   const [attendees, setAttendees] = useState(meetup.meetup_attendees?.map((a) => a.user_id) ?? []);
   const [busy, setBusy] = useState(false);
   const going = attendees.includes(userId);
+  const live = isLive(meetup);
+  const type = sessionTypeInfo(meetup.session_type);
 
   async function toggle() {
     setBusy(true);
-    const { error } = going
-      ? await supabase.from('meetup_attendees').delete().match({ meetup_id: meetup.id, user_id: userId })
-      : await supabase.from('meetup_attendees').insert({ meetup_id: meetup.id, user_id: userId });
-    if (!error) setAttendees(going ? attendees.filter((id) => id !== userId) : [...attendees, userId]);
+    try {
+      setAttendees(await toggleAttendance(meetup, userId, attendees));
+    } catch (e) {
+      Alert.alert('Error', (e as Error).message);
+    }
     setBusy(false);
   }
 
   return (
     <Card>
-      <Text style={styles.date}>{formatDateTime(meetup.starts_at)}</Text>
+      <View style={styles.top}>
+        {live ? (
+          <Text style={styles.live}>● EN VIVO · {minutesLeft(meetup)} min</Text>
+        ) : (
+          <Text style={styles.date}>{formatDateTime(meetup.starts_at)}</Text>
+        )}
+        <Text style={styles.tag}>
+          {type.emoji} {type.label}
+        </Text>
+      </View>
       <Title>{meetup.title}</Title>
       <Body muted>
-        📍 {meetup.skateparks?.name ?? 'Skatepark'} · por @{meetup.profiles?.username ?? 'skater'}
+        📍 {meetup.skateparks?.name ?? 'Skatepark'} · {levelLabel(meetup.level)} · {meetup.duration_minutes / 60} h
       </Body>
-      {!!meetup.description && <Body>{meetup.description}</Body>}
+      {!compact && !!meetup.description && <Body>{meetup.description}</Body>}
       <View style={styles.footer}>
         <Body muted>
-          {attendees.length} {attendees.length === 1 ? 'va' : 'van'}
+          {attendees.length} {attendees.length === 1 ? 'va' : 'van'} · por @{meetup.profiles?.username ?? 'skater'}
         </Body>
         <View style={{ minWidth: 120 }}>
-          <Button label={going ? 'Ya no voy' : 'Me apunto'} variant={going ? 'secondary' : 'primary'} onPress={toggle} loading={busy} />
+          <Button
+            label={going ? 'Salir' : live ? 'Unirse ya' : 'Me apunto'}
+            variant={going ? 'secondary' : 'primary'}
+            onPress={toggle}
+            loading={busy}
+          />
         </View>
       </View>
     </Card>
@@ -46,6 +61,9 @@ export function MeetupCard({ meetup }: { meetup: Meetup }) {
 }
 
 const styles = StyleSheet.create({
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   date: { color: colors.accent, fontWeight: '700', textTransform: 'capitalize' },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  live: { color: colors.live, fontWeight: '800' },
+  tag: { color: colors.muted, fontSize: 13 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, gap: 8 },
 });

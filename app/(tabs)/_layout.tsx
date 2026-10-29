@@ -33,7 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="meetups"
         options={{
-          title: 'Encuentros',
+          title: 'Sesiones',
           tabBarIcon: ({ color }) => <Icon ios="calendar" material="event" color={color} />,
         }}
       />

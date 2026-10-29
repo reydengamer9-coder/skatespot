@@ -38,7 +38,7 @@ function RootNav() {
         <Stack.Screen name="park/[id]" options={{ title: 'Skatepark' }} />
         <Stack.Screen name="park/new" options={{ title: 'Nuevo skatepark', presentation: 'modal' }} />
         <Stack.Screen name="chat/[room]" options={{ title: 'Chat' }} />
-        <Stack.Screen name="meetup/new" options={{ title: 'Nuevo encuentro', presentation: 'modal' }} />
+        <Stack.Screen name="meetup/new" options={{ title: 'Nueva sesión', presentation: 'modal' }} />
         <Stack.Screen name="post/new" options={{ title: 'Subir truco', presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>

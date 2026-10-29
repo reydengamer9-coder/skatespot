@@ -25,14 +25,20 @@ export type Message = {
   profiles?: Pick<Profile, 'username' | 'avatar_url'> | null;
 };
 
+export type SessionType = 'street' | 'bowl' | 'park' | 'principiantes' | 'game_of_skate' | 'filmacion';
+export type SessionLevel = 'todos' | 'principiante' | 'intermedio' | 'avanzado';
+
 export type Meetup = {
   id: string;
   park_id: string;
   title: string;
   description: string | null;
   starts_at: string;
+  duration_minutes: number;
+  session_type: SessionType;
+  level: SessionLevel;
   created_by: string;
-  skateparks?: Pick<Skatepark, 'name'> | null;
+  skateparks?: Pick<Skatepark, 'name' | 'lat' | 'lng'> | null;
   profiles?: Pick<Profile, 'username'> | null;
   meetup_attendees?: { user_id: string }[];
 };

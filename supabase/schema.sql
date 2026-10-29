@@ -98,6 +98,10 @@ create table public.meetups (
   title text not null,
   description text default '',
   starts_at timestamptz not null,
+  duration_minutes int not null default 120 check (duration_minutes between 15 and 720),
+  session_type text not null default 'street'
+    check (session_type in ('street', 'bowl', 'park', 'principiantes', 'game_of_skate', 'filmacion')),
+  level text not null default 'todos' check (level in ('todos', 'principiante', 'intermedio', 'avanzado')),
   created_by uuid not null references public.profiles (id) on delete cascade,
   created_at timestamptz not null default now()
 );
