@@ -53,14 +53,28 @@ npm start              # escanea el QR con Expo Go en tu celular
 3. **Deploy** (no hacen falta variables de entorno: la configuración pública está en `lib/config.ts`). `vercel.json` ya define el build (`npx expo export -p web`) y la carpeta `dist`.
 4. En Supabase → **Authentication → URL Configuration** pon tu dominio de Vercel como *Site URL*.
 
-## 5. App para Android / iOS
+## 5. Usar SkateSpot como app en el celular
 
-- **Probar:** `npm start` y escanea el QR con **Expo Go**.
-- **Generar APK** (gratis con límites mensuales):
-  ```bash
-  npx eas-cli@latest build -p android --profile preview
-  ```
-  Publicar en Play Store cuesta 25 USD (pago único); App Store 99 USD/año.
+**Opción A — Instalar la web (Android y iPhone, al instante)**
+- **Android (Chrome):** abre la web → menú ⋮ → **Instalar app** (o *Agregar a pantalla de inicio*).
+- **iPhone (Safari):** abre la web → botón **Compartir** → **Agregar a inicio**.
+
+Queda con su icono, abre a pantalla completa y se actualiza sola con cada `git push`.
+
+**Opción B — Probar la app nativa con Expo Go**
+Instala **Expo Go** en el celular, corre `npm start` en la computadora y escanea el QR
+(el celular y la computadora deben estar en la misma red Wi-Fi).
+
+**Opción C — APK de Android (app nativa instalable)**
+```bash
+npx eas-cli@latest login
+```
+```bash
+npx eas-cli@latest build -p android --profile preview
+```
+La primera vez pregunta si crear el proyecto en Expo y la clave de firma: responde que sí a todo.
+Al terminar (10–20 min) da un enlace/QR para descargar el `.apk` e instalarlo.
+Gratis con límite mensual de builds. Play Store: 25 USD (pago único). App Store: 99 USD/año.
 
 ## 6. Importar todos los skateparks de Estados Unidos
 
