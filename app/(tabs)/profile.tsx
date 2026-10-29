@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { POST_SELECT, PostCard } from '@/components/PostCard';
 import { Body, Button, Empty, Input, Screen, Title } from '@/components/ui';
@@ -10,6 +10,7 @@ import { useUserId } from '@/lib/auth';
 import { pickMedia, uploadMedia } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
 import type { Post, Profile } from '@/lib/types';
+import { showAlert } from '@/lib/alert';
 
 export default function ProfileScreen() {
   const userId = useUserId();
@@ -40,7 +41,7 @@ export default function ProfileScreen() {
     setSaving(true);
     const { error } = await supabase.from('profiles').update(changes).eq('id', userId);
     setSaving(false);
-    if (error) return Alert.alert('Error', error.message);
+    if (error) return showAlert('Error', error.message);
     setProfile((prev) => (prev ? { ...prev, ...changes } : prev));
   }
 
@@ -50,7 +51,7 @@ export default function ProfileScreen() {
     try {
       await save({ avatar_url: await uploadMedia(userId, picked) });
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      showAlert('Error', (e as Error).message);
     }
   }
 

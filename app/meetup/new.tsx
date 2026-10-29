@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ParkPicker } from '@/components/ParkPicker';
 import { Body, Button, ChipGroup, Input, Screen } from '@/components/ui';
@@ -9,6 +9,7 @@ import { useUserId } from '@/lib/auth';
 import { DURATIONS, SESSION_LEVELS, SESSION_TYPES, sessionTypeInfo } from '@/lib/sessions';
 import { supabase } from '@/lib/supabase';
 import type { SessionLevel, SessionType } from '@/lib/types';
+import { showAlert } from '@/lib/alert';
 
 type Mode = 'now' | 'later';
 type Day = 'hoy' | 'manana' | 'otro';
@@ -27,7 +28,7 @@ export default function NewSessionScreen() {
   const [level, setLevel] = useState<SessionLevel>('todos');
   const [duration, setDuration] = useState(120);
   const [day, setDay] = useState<Day>('hoy');
-  const [customDate, setCustomDate] = useState(isoDate(new Date(Date.now() + 2 * 86400000)));
+  const [customDate, setCustomDate] = useState(() => isoDate(new Date(Date.now() + 2 * 86400000)));
   const [time, setTime] = useState('17:00');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -41,9 +42,9 @@ export default function NewSessionScreen() {
 
   async function save() {
     const startsAt = startDate();
-    if (!parkId) return Alert.alert('Elige un skatepark');
-    if (isNaN(startsAt.getTime())) return Alert.alert('Fecha u hora inválida', 'Usa AAAA-MM-DD y HH:MM');
-    if (mode === 'later' && startsAt < new Date()) return Alert.alert('Esa hora ya pasó', 'Elige una hora futura.');
+    if (!parkId) return showAlert('Elige un skatepark');
+    if (isNaN(startsAt.getTime())) return showAlert('Fecha u hora inválida', 'Usa AAAA-MM-DD y HH:MM');
+    if (mode === 'later' && startsAt < new Date()) return showAlert('Esa hora ya pasó', 'Elige una hora futura.');
 
     setSaving(true);
     const { data, error } = await supabase
@@ -63,7 +64,7 @@ export default function NewSessionScreen() {
     // Quien crea la sesión queda apuntado automáticamente
     if (!error) await supabase.from('meetup_attendees').insert({ meetup_id: data.id, user_id: userId });
     setSaving(false);
-    if (error) return Alert.alert('Error', error.message);
+    if (error) return showAlert('Error', error.message);
     router.back();
   }
 
@@ -140,7 +141,7 @@ export default function NewSessionScreen() {
         </Section>
 
         <Button label={mode === 'now' ? '🔴 Empezar sesión en vivo' : 'Crear sesión'} onPress={save} loading={saving} />
-        {mode === 'now' && <Body muted>Aparecerá en la burbuja "En vivo" del mapa para que otros skaters se unan.</Body>}
+        {mode === 'now' && <Body muted>Aparecerá en la burbuja «En vivo» del mapa para que otros skaters se unan.</Body>}
       </ScrollView>
     </Screen>
   );

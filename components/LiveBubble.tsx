@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing } from '@/constants/theme';
+import { colors } from '@/constants/theme';
 import { useUserId } from '@/lib/auth';
 import { minutesLeft, sessionTypeInfo, toggleAttendance } from '@/lib/sessions';
 import type { Meetup } from '@/lib/types';
+import { showAlert } from '@/lib/alert';
 
 /** Burbuja flotante con las sesiones que están pasando ahora mismo. */
 export function LiveBubble({ sessions, onSelectPark }: { sessions: Meetup[]; onSelectPark: (id: string) => void }) {
@@ -63,7 +64,7 @@ function LiveRow({ session, onPress }: { session: Meetup; onPress: () => void })
     try {
       setAttendees(await toggleAttendance(session, userId, attendees));
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      showAlert('Error', (e as Error).message);
     }
     setBusy(false);
   }

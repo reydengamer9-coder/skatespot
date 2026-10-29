@@ -7,7 +7,9 @@ export function ParkMap({ data, onSelect }: { data: MapData; onSelect: (id: stri
   const ref = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
   const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     function handle(e: MessageEvent) {

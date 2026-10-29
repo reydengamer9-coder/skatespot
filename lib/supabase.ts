@@ -2,14 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Faltan EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY en el archivo .env');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     // En web Supabase usa localStorage por defecto; en móvil usamos AsyncStorage.
     storage: Platform.OS === 'web' ? undefined : AsyncStorage,

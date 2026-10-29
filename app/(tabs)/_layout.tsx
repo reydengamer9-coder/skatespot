@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 
 import { Icon } from '@/components/ui';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { colors } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -13,8 +12,6 @@ export default function TabLayout() {
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        // Evita error de hidratación en web
-        headerShown: useClientOnlyValue(false, true),
       }}>
       <Tabs.Screen
         name="index"

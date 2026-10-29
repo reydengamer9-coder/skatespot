@@ -1,5 +1,4 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import type { ColorValue } from 'react-native';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -8,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  type ColorValue,
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';

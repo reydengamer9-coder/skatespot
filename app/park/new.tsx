@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 
 import { MediaView } from '@/components/MediaView';
 import { Body, Button, Input, Screen } from '@/components/ui';
@@ -9,6 +9,7 @@ import { useUserId } from '@/lib/auth';
 import { useLocation } from '@/lib/location';
 import { pickMedia, uploadMedia, type PickedMedia } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 
 export default function NewParkScreen() {
   const userId = useUserId();
@@ -20,8 +21,8 @@ export default function NewParkScreen() {
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!coords) return Alert.alert('Ubicación', 'Aún no tenemos tu ubicación.');
-    if (!name.trim()) return Alert.alert('Falta el nombre');
+    if (!coords) return showAlert('Ubicación', 'Aún no tenemos tu ubicación.');
+    if (!name.trim()) return showAlert('Falta el nombre');
     setSaving(true);
     try {
       const photo_url = photo ? await uploadMedia(userId, photo) : null;
@@ -33,7 +34,7 @@ export default function NewParkScreen() {
       if (error) throw error;
       router.replace({ pathname: '/park/[id]', params: { id: data.id } });
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      showAlert('Error', (e as Error).message);
     } finally {
       setSaving(false);
     }

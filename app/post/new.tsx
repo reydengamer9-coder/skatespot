@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 
 import { MediaView } from '@/components/MediaView';
 import { ParkPicker } from '@/components/ParkPicker';
@@ -9,6 +9,7 @@ import { spacing } from '@/constants/theme';
 import { useUserId } from '@/lib/auth';
 import { pickMedia, uploadMedia, type PickedMedia } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 
 export default function NewPostScreen() {
   const userId = useUserId();
@@ -29,7 +30,7 @@ export default function NewPostScreen() {
       if (error) throw error;
       router.back();
     } catch (e) {
-      Alert.alert('Error al subir', (e as Error).message);
+      showAlert('Error al subir', (e as Error).message);
     } finally {
       setSaving(false);
     }

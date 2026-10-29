@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, Title } from '@/components/ui';
 import { colors } from '@/constants/theme';
@@ -7,6 +7,7 @@ import { useUserId } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { isLive, levelLabel, minutesLeft, sessionTypeInfo, toggleAttendance } from '@/lib/sessions';
 import type { Meetup } from '@/lib/types';
+import { showAlert } from '@/lib/alert';
 
 export function MeetupCard({ meetup, compact }: { meetup: Meetup; compact?: boolean }) {
   const userId = useUserId();
@@ -21,7 +22,7 @@ export function MeetupCard({ meetup, compact }: { meetup: Meetup; compact?: bool
     try {
       setAttendees(await toggleAttendance(meetup, userId, attendees));
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      showAlert('Error', (e as Error).message);
     }
     setBusy(false);
   }

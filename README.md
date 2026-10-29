@@ -33,7 +33,7 @@ Un solo código para las tres plataformas.
 2. Ve a **SQL Editor → New query**, pega todo [`supabase/schema.sql`](supabase/schema.sql) y pulsa **Run**.
    Crea las tablas, la seguridad (RLS), el chat en tiempo real y el bucket `media` para fotos/videos.
 3. (Opcional, para pruebas) En **Authentication → Providers → Email** desactiva *Confirm email*.
-4. En **Project Settings → API** copia la *Project URL* y la *anon public key*.
+4. En **Project Settings → API** copia la *Project URL* y la *anon public key* y pégalas en [`lib/config.ts`](lib/config.ts).
 
 ## 3. Correr el proyecto en tu computadora
 
@@ -41,7 +41,6 @@ Un solo código para las tres plataformas.
 git clone https://github.com/TU-USUARIO/skatespot.git
 cd skatespot
 npm install
-cp .env.example .env   # pega ahí tu URL y anon key de Supabase
 npm run web            # abre la web en el navegador
 npm start              # escanea el QR con Expo Go en tu celular
 ```
@@ -50,9 +49,8 @@ npm start              # escanea el QR con Expo Go en tu celular
 
 1. Sube el código a GitHub.
 2. En [vercel.com/new](https://vercel.com/new) importa el repositorio `skatespot`.
-3. En **Environment Variables** agrega `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-4. **Deploy**. `vercel.json` ya define el build (`npx expo export -p web`) y la carpeta `dist`.
-5. En Supabase → **Authentication → URL Configuration** pon tu dominio de Vercel como *Site URL*.
+3. **Deploy** (no hacen falta variables de entorno: la configuración pública está en `lib/config.ts`). `vercel.json` ya define el build (`npx expo export -p web`) y la carpeta `dist`.
+4. En Supabase → **Authentication → URL Configuration** pon tu dominio de Vercel como *Site URL*.
 
 ## 5. App para Android / iOS
 

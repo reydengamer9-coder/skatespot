@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Input, Screen } from '@/components/ui';
 import { colors, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -23,8 +24,8 @@ export default function LoginScreen() {
             options: { data: { username: username.trim() } },
           });
     setLoading(false);
-    if (error) return Alert.alert('Error', error.message);
-    if (mode === 'signup') Alert.alert('¡Listo!', 'Revisa tu correo si tu proyecto requiere confirmación.');
+    if (error) return showAlert('Error', error.message);
+    if (mode === 'signup') showAlert('¡Listo!', 'Revisa tu correo si tu proyecto requiere confirmación.');
   }
 
   return (
