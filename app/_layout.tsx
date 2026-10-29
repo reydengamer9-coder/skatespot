@@ -1,56 +1,46 @@
-import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { Loading } from '@/components/ui';
+import { colors } from '@/constants/theme';
+import { AuthProvider, useAuth } from '@/lib/auth';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  anchor: '(tabs)',
+const theme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: colors.bg, card: colors.card, primary: colors.accent, border: colors.border },
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <ThemeProvider value={theme}>
+        <StatusBar style="light" />
+        <RootNav />
+      </ThemeProvider>
+    </AuthProvider>
+  );
 }
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+function RootNav() {
+  const { session, loading } = useAuth();
+  if (loading) return <Loading />;
+  const signedIn = !!session;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <Stack screenOptions={{ headerTintColor: colors.text, headerBackButtonDisplayMode: 'minimal' }}>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+        <Stack.Screen name="park/[id]" options={{ title: 'Skatepark' }} />
+        <Stack.Screen name="park/new" options={{ title: 'Nuevo skatepark', presentation: 'modal' }} />
+        <Stack.Screen name="chat/[room]" options={{ title: 'Chat' }} />
+        <Stack.Screen name="meetup/new" options={{ title: 'Nuevo encuentro', presentation: 'modal' }} />
+        <Stack.Screen name="post/new" options={{ title: 'Subir truco', presentation: 'modal' }} />
+      </Stack.Protected>
+    </Stack>
   );
 }
