@@ -1,9 +1,9 @@
-import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, ScrollView, Text, View } from 'react-native';
 
 import { MeetupCard } from '@/components/MeetupCard';
+import { ParkPhotos } from '@/components/ParkPhotos';
 import { POST_SELECT, PostCard } from '@/components/PostCard';
 import { Body, Button, Empty, Loading, Screen, Title } from '@/components/ui';
 import { colors, spacing } from '@/constants/theme';
@@ -39,9 +39,7 @@ export default function ParkScreen() {
     <Screen>
       <Stack.Screen options={{ title: park.name }} />
       <ScrollView contentContainerStyle={{ padding: spacing, gap: 12, maxWidth: 720, width: '100%', alignSelf: 'center' }}>
-        {park.photo_url && (
-          <Image source={{ uri: park.photo_url }} style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 14 }} />
-        )}
+        <ParkPhotos park={park} />
         <Title>{park.name}</Title>
         {!!park.address && <Body muted>{park.address}</Body>}
         {!!park.description && <Body>{park.description}</Body>}
