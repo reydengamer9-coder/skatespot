@@ -1,0 +1,35 @@
+# Importa todos los skateparks de Estados Unidos desde OpenStreetMap a Supabase.
+# Se ejecuta a mano (Actions → "Importar skateparks" → Run workflow) y una vez al mes.
+# Requiere el secreto SUPABASE_SERVICE_ROLE_KEY (Settings → Secrets and variables → Actions).
+name: Importar skateparks
+
+on:
+  workflow_dispatch:
+    inputs:
+      states:
+        description: 'Estados separados por espacios (ej. "CA NY TX"). Vacío = todos.'
+        required: false
+        default: ''
+  schedule:
+    - cron: '17 9 1 * *' # día 1 de cada mes
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Importar desde OpenStreetMap
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STATES: ${{ inputs.states }}
+        # $STATES sin comillas a propósito: cada estado es un argumento (el script valida los códigos)
+        run: npx tsx scripts/import-osm-skateparks.ts $STATES

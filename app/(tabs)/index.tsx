@@ -25,17 +25,40 @@ const PARK_COLUMNS = 'id, name, description, address, lat, lng, photo_url, osm_i
 
 const wrapLng = (x: number) => ((((x + 180) % 360) + 360) % 360) - 180;
 
-/** Parques dentro de la zona visible del mapa (hasta 2000). */
+/** Si la zona ya tiene parques de OpenStreetMap, ya se importó (p. ej. con la importación masiva). */
+const alreadyImported = (list: Skatepark[]) => list.some((p) => p.osm_id);
+
+const PAGE = 1000; // Supabase devuelve como máximo 1000 filas por consulta
+const MAX_PAGES = 15; // hasta 15 000 parques por zona visible (EE. UU. entero cabe)
+
+/** Parques dentro de la zona visible del mapa, pidiendo varias páginas en paralelo. */
 async function fetchParksInBounds(b: Bounds) {
-  let q = supabase.from('skateparks').select(PARK_COLUMNS).gte('lat', b.south).lte('lat', b.north).limit(2000);
-  if (b.east - b.west < 360) {
-    const w = wrapLng(b.west);
-    const e = wrapLng(b.east);
-    // Si la zona cruza el antimeridiano (w > e) se piden los dos lados
-    q = w <= e ? q.gte('lng', w).lte('lng', e) : q.or(`lng.gte.${w},lng.lte.${e}`);
+  const page = async (i: number) => {
+    let q = supabase
+      .from('skateparks')
+      .select(PARK_COLUMNS)
+      .gte('lat', b.south)
+      .lte('lat', b.north)
+      .order('id')
+      .range(i * PAGE, i * PAGE + PAGE - 1);
+    if (b.east - b.west < 360) {
+      const w = wrapLng(b.west);
+      const e = wrapLng(b.east);
+      // Si la zona cruza el antimeridiano (w > e) se piden los dos lados
+      q = w <= e ? q.gte('lng', w).lte('lng', e) : q.or(`lng.gte.${w},lng.lte.${e}`);
+    }
+    const { data } = await q;
+    return (data as Skatepark[]) ?? [];
+  };
+
+  const all = await page(0);
+  // Si la primera página vino llena, pide el resto de golpe (de 4 en 4)
+  for (let i = 1; all.length === i * PAGE && i < MAX_PAGES; i += 4) {
+    const more = await Promise.all([i, i + 1, i + 2, i + 3].filter((n) => n < MAX_PAGES).map(page));
+    more.forEach((m) => all.push(...m));
+    if (more.some((m) => m.length < PAGE)) break;
   }
-  const { data } = await q;
-  return (data as Skatepark[]) ?? [];
+  return all;
 }
 
 export default function ParksScreen() {
@@ -81,7 +104,7 @@ export default function ParksScreen() {
     setLoading(false);
 
     // Completa la lista con los skateparks de OpenStreetMap alrededor del usuario (una vez por zona)
-    if (coords && (await runImport(() => importNearbySkateparks(coords, radius, userId, list)))) {
+    if (coords && !alreadyImported(list) && (await runImport(() => importNearbySkateparks(coords, radius, userId, list)))) {
       const again = await fetchNearby();
       setListParks(again);
       mergeParks(again);
@@ -93,7 +116,7 @@ export default function ParksScreen() {
     async (b: Bounds, zoom: number) => {
       const list = await fetchParksInBounds(b);
       mergeParks(list);
-      if (zoom >= IMPORT_MIN_ZOOM && (await runImport(() => importSkateparksInBounds(b, userId, list)))) {
+      if (zoom >= IMPORT_MIN_ZOOM && !alreadyImported(list) && (await runImport(() => importSkateparksInBounds(b, userId, list)))) {
         mergeParks(await fetchParksInBounds(b));
       }
     },

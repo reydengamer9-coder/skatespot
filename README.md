@@ -62,6 +62,21 @@ npm start              # escanea el QR con Expo Go en tu celular
   ```
   Publicar en Play Store cuesta 25 USD (pago único); App Store 99 USD/año.
 
+## 6. Importar todos los skateparks de Estados Unidos
+
+Una GitHub Action descarga de OpenStreetMap todos los skateparks de EE. UU. (estado por estado)
+y los guarda en Supabase, para que el mapa los muestre al instante. Se repite sola cada mes.
+
+1. En Supabase → **Project Settings → API Keys** copia la **service_role** key (o una *secret key*).
+   ⚠️ Es privada: no la pegues en el código ni la compartas.
+2. En GitHub → tu repo → **Settings → Secrets and variables → Actions → New repository secret**:
+   nombre `SUPABASE_SERVICE_ROLE_KEY`, valor la clave del paso 1.
+3. En GitHub → **Actions → Importar skateparks → Run workflow**. Deja *states* vacío para todos los
+   estados o escribe algunos, por ejemplo `CA NY TX`. Tarda unos minutos.
+
+También se puede correr en tu computadora: `SUPABASE_SERVICE_ROLE_KEY=... npm run import:skateparks -- CA`
+(añade `--dry-run` para ver cuántos encontraría sin guardar nada).
+
 ## Estructura
 
 ```
@@ -76,6 +91,7 @@ app/                  Pantallas (cada archivo es una ruta)
 components/           UI reutilizable (tarjetas, chat, video, selector de parque)
 lib/                  Supabase, sesión, ubicación, subida de archivos
 supabase/schema.sql   Base de datos completa
+scripts/              Importación masiva de skateparks desde OpenStreetMap
 ```
 
 ## Límites del plan gratis
