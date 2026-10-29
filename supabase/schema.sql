@@ -58,6 +58,9 @@ create table if not exists public.skateparks (
   created_at timestamptz not null default now()
 );
 
+-- Parques importados de OpenStreetMap: "node/123", "way/456"… (null si lo registró un usuario)
+alter table public.skateparks add column if not exists osm_id text unique;
+
 create index if not exists skateparks_location_idx on public.skateparks using gist (location);
 
 -- Skateparks dentro de un radio (km), ordenados por distancia

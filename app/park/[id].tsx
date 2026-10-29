@@ -1,12 +1,12 @@
 import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { Linking, ScrollView, Text, View } from 'react-native';
 
 import { MeetupCard } from '@/components/MeetupCard';
 import { POST_SELECT, PostCard } from '@/components/PostCard';
 import { Body, Button, Empty, Loading, Screen, Title } from '@/components/ui';
-import { spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 import { mapsUrl } from '@/lib/format';
 import { fetchSessions } from '@/lib/sessions';
 import { supabase } from '@/lib/supabase';
@@ -45,6 +45,11 @@ export default function ParkScreen() {
         <Title>{park.name}</Title>
         {!!park.address && <Body muted>{park.address}</Body>}
         {!!park.description && <Body>{park.description}</Body>}
+        {!!park.osm_id && (
+          <Text style={{ color: colors.muted, fontSize: 12 }} onPress={() => Linking.openURL(`https://www.openstreetmap.org/${park.osm_id}`)}>
+            Datos © colaboradores de OpenStreetMap
+          </Text>
+        )}
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <View style={{ flex: 1 }}>

@@ -3,6 +3,7 @@
 App móvil (Android/iOS) **y** página web para encontrar skateparks cercanos y hacer comunidad:
 
 - 📍 **Parques cercanos** según tu ubicación (5 / 25 / 100 km), con "Cómo llegar" en Google Maps
+- 🗺️ **Skateparks de OpenStreetMap** importados automáticamente al abrir el mapa (datos abiertos, sin key)
 - ➕ **Agregar skateparks** con foto, desde el propio parque
 - 💬 **Chat en tiempo real**: canal general + un chat por cada skatepark
 - 📅 **Encuentros**: arma sesiones en un parque, apúntate o sal
@@ -88,3 +89,10 @@ supabase/schema.sql   Base de datos completa
 - Notificaciones push (mensajes, recordatorio de encuentros)
 - Seguir a otros skaters
 - Reportar contenido / moderación
+
+## Créditos de datos
+
+- Skateparks importados de [OpenStreetMap](https://www.openstreetmap.org/copyright) © colaboradores de OpenStreetMap, licencia ODbL, consultados con la [Overpass API](https://overpass-api.de).
+- Mapa: [MapLibre GL](https://maplibre.org) + [OpenFreeMap](https://openfreemap.org).
+- ¿Falta un skatepark? Agrégalo en la app o directamente en OpenStreetMap (etiqueta `leisure=pitch` + `sport=skateboard`) y le sirve a todo el mundo.
+

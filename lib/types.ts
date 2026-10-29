@@ -13,6 +13,7 @@ export type Skatepark = {
   lat: number;
   lng: number;
   photo_url: string | null;
+  osm_id?: string | null;
   distance_km?: number;
 };
 

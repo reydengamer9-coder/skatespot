@@ -8,9 +8,11 @@ import { MeetupCard } from '@/components/MeetupCard';
 import { ParkMap } from '@/components/ParkMap';
 import { Body, Button, Card, Chip, Empty, Screen, Title } from '@/components/ui';
 import { colors, spacing } from '@/constants/theme';
+import { useUserId } from '@/lib/auth';
 import { formatDistance } from '@/lib/format';
 import { useLocation } from '@/lib/location';
 import type { MapData } from '@/lib/mapHtml';
+import { importNearbySkateparks } from '@/lib/osm';
 import { fetchSessions } from '@/lib/sessions';
 import { supabase } from '@/lib/supabase';
 import type { Meetup, Skatepark } from '@/lib/types';
@@ -19,6 +21,7 @@ const RADII = [5, 25, 100];
 const REFRESH_MS = 60_000;
 
 export default function ParksScreen() {
+  const userId = useUserId();
   const { coords, error, refresh } = useLocation();
   const [view, setView] = useState<'map' | 'list'>('map');
   const [radius, setRadius] = useState(25);
@@ -26,18 +29,30 @@ export default function ParksScreen() {
   const [live, setLive] = useState<Meetup[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     // Sin ubicación mostramos todos los parques; con ubicación, los del radio elegido.
-    const parksQuery = coords
-      ? supabase.rpc('nearby_skateparks', { user_lat: coords.lat, user_lng: coords.lng, radius_km: radius })
-      : supabase.from('skateparks').select('*').limit(200);
-    const [{ data }, sessions] = await Promise.all([parksQuery, fetchSessions()]);
-    setParks((data as Skatepark[]) ?? []);
+    const fetchParks = async () => {
+      const { data } = coords
+        ? await supabase.rpc('nearby_skateparks', { user_lat: coords.lat, user_lng: coords.lng, radius_km: radius })
+        : await supabase.from('skateparks').select('*').limit(200);
+      return (data as Skatepark[]) ?? [];
+    };
+    const [list, sessions] = await Promise.all([fetchParks(), fetchSessions()]);
+    setParks(list);
     setLive(sessions.live);
     setLoading(false);
-  }, [coords, radius]);
+
+    // Completa el mapa con los skateparks de OpenStreetMap de la zona (una vez por zona)
+    if (coords) {
+      setImporting(true);
+      const added = await importNearbySkateparks(coords, radius, userId, list);
+      setImporting(false);
+      if (added) setParks(await fetchParks());
+    }
+  }, [coords, radius, userId]);
 
   // Recarga al volver a la pestaña y cada minuto mientras está abierta (sesiones en vivo).
   useFocusEffect(
@@ -122,6 +137,7 @@ export default function ParksScreen() {
             setSelectedId(id);
           }}
         />
+        {importing && <Text style={styles.importing}>Buscando skateparks en OpenStreetMap…</Text>}
         {error && (
           <Pressable onPress={refresh} style={styles.warning}>
             <Text style={{ color: colors.text, fontSize: 13 }}>{error} Toca para reintentar.</Text>
@@ -183,6 +199,15 @@ const styles = StyleSheet.create({
     padding: 4,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  importing: {
+    color: colors.text,
+    fontSize: 12,
+    backgroundColor: colors.card,
+    borderRadius: 99,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    overflow: 'hidden',
   },
   warning: { backgroundColor: colors.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: colors.danger },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
